@@ -15,7 +15,6 @@ class ClockJSON(app.App):
         self.button_states = Buttons(self)
         self.state = "init"
         self.ip = ""
-        self.ip_displayed = False
         self.local_time = ""
         self.time_fetched = False
         self.hours = 0
@@ -87,6 +86,14 @@ class ClockJSON(app.App):
         self.update_state("ip_ready")
 
     def update(self, delta):
+        if self.button_states.get(BUTTON_TYPES["CANCEL"]):
+            self.button_states.clear()
+            self.minimise()
+        if self.button_states.get(BUTTON_TYPES["CONFIRM"]):
+            self.button_states.clear()
+            print("Retrying!")
+            self.update_state("init")
+
         if self.state == "init":
             print("calling get_ip")
             try:
@@ -96,15 +103,14 @@ class ClockJSON(app.App):
                 self.update_state("no_ip")
         elif self.state == "ip_received":
             self.handle_ip()
-        elif self.state == "ip_ready" and not self.ip_displayed:
-            self.ip_displayed = True
+        elif self.state == "ip_ready":
             self.update_state("fetching_time")
         elif self.state == "no_ip":
-            self.ip = "No ip API"
+            self.ip = "Can't acccess API\nC button to retry"
         elif self.state == "time_fetched" and not self.time_fetched:
             self.time_fetched = True
         elif self.state == "time_fetch_error":
-            self.local_time = "No time API"
+            self.local_time = "Can't acccess API\nC button to retry"
             
         if self.button_states.get(BUTTON_TYPES["CANCEL"]):
             self.button_states.clear()
@@ -148,7 +154,7 @@ class ClockJSON(app.App):
         if self.local_time:
             # Custom formatting of time
             day_suffix = lambda d: 'th' if 11<=d<=13 else {1:'st',2:'nd',3:'rd'}.get(d%10, 'th')
-            weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            weekdays = ["Mon", "Tue", "Wed", "Thurs", "Fri", "Sat", "Sun"]
             months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
             formatted_date = f'{weekdays[self.get_weekday_index()]}, {self.day}{day_suffix(self.day)} {months[self.month - 1]}'
             formatted_time = f'{self.hours:02d}:{self.minutes:02d}'
@@ -193,19 +199,19 @@ class ClockJSON(app.App):
         ctx.rectangle(-120, -120, 240, 240).fill()
         
         # Drawing the top bar
-        ctx.rgb(0, 0, 0)
-        ctx.rectangle(-120, -120, 240, 20).fill()
         ctx.font_size = 16
         ctx.rgb(0.15, 0.15, 0.15)
-        ctx.rectangle(10, -120, 200, 50).fill()
+        ctx.rectangle(30, -120, 200, 50).fill()
+        ctx.rgb(0, 0, 0)
+        ctx.rectangle(-120, -120, 240, 20).fill()
         ctx.rgb(1, 1, 1)
-        ctx.move_to(-60, -80)
+        ctx.move_to(-30, -85)
         ctx.text("clockface.json  x")
     
         # Drawing line numbers
         ctx.rgb(0.5, 0.5, 0.5)
         ctx.font_size = 12
-        for i in range(1, 14):
+        for i in range(0, 14):
             ctx.move_to(-95, (i * 20) - 60)
             ctx.text(str(i+1))
 
