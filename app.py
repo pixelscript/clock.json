@@ -136,7 +136,8 @@ class ClockJSON(app.App):
             ctx.rgb(1, 0, 0).move_to(0, 0).text(self.ip)
         elif self.state == 'time_fetched':
             ctx.rgb(0, 0.2, 0).rectangle(-120, -120, 240, 240).fill()
-            ctx.rgb(0, 1, 0).move_to(0, 0).text(self.format_time())
+            [formatted_date,formatted_time] = self.format_time()
+            self.draw_clock(ctx, formatted_date, formatted_time, self.ip)
         elif self.state == 'time_fetch_error':
             ctx.rgb(0.2, 0, 0).rectangle(-120, -120, 240, 240).fill()
             ctx.rgb(1, 0, 0).move_to(0, 0).text(self.local_time)
@@ -151,7 +152,7 @@ class ClockJSON(app.App):
             months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
             formatted_date = f'{weekdays[self.get_weekday_index()]}, {self.day}{day_suffix(self.day)} {months[self.month - 1]}'
             formatted_time = f'{self.hours:02d}:{self.minutes:02d}'
-            return f"{formatted_date}\n{formatted_time}"
+            return [formatted_date,formatted_time]
         return "No time API"
 
     def increment_time(self):
@@ -182,5 +183,78 @@ class ClockJSON(app.App):
     def get_weekday_index(self):
         weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         return weekdays.index(self.weekday)
+    
+    def draw_clock(self, ctx, date_str, time_str, ip):
+        clear_background(ctx)
+        ctx.save()
+        
+        # Drawing the backgrounds
+        ctx.rgb(0.11, 0.11, 0.11)
+        ctx.rectangle(-120, -120, 240, 240).fill()
+        
+        # Drawing the top bar
+        ctx.rgb(0, 0, 0)
+        ctx.rectangle(-120, -120, 240, 20).fill()
+        ctx.font_size = 16
+        ctx.rgb(0.15, 0.15, 0.15)
+        ctx.rectangle(10, -120, 200, 50).fill()
+        ctx.rgb(1, 1, 1)
+        ctx.move_to(-60, -80)
+        ctx.text("clockface.json  x")
+    
+        # Drawing line numbers
+        ctx.rgb(0.5, 0.5, 0.5)
+        ctx.font_size = 12
+        for i in range(1, 14):
+            ctx.move_to(-95, (i * 20) - 60)
+            ctx.text(str(i+1))
+
+        json_data = '''
+{{
+  "date": "{}",
+  "time": "{}",
+  "ip": "{}"
+}}
+'''.format(date_str, time_str, ip)
+
+        # Drawing the JSON data with syntax highlighting
+
+        lines = json_data.strip().split('\n')
+        colors = {
+            'key': (0.61, 0.86, 0.99),
+            'string': (0.80, 0.56, 0.47),
+            'number': (0.5, 0.5, 0.8),
+            'bracket': (0.8, 0.8, 0.8),
+            'colon': (0.8, 0.8, 0.8),
+            'comma': (0.8, 0.8, 0.8)
+        }
+
+        y_position = -60
+        in_string = False  # Initialize in_string
+        for line in lines:
+            x_position = -80  # Moved closer to the center
+            char_count = 0
+            for char in line:
+                if char in '{}[]':
+                    ctx.rgb(*colors['bracket'])
+                elif char in ':':
+                    ctx.rgb(*colors['colon'])
+                elif char == '"':
+                    char_count += 1
+                    if char_count <= 2:
+                        ctx.rgb(*colors['key'])
+                    else:
+                        ctx.rgb(*colors['string'])
+                else:
+                    if char_count <= 2:
+                        ctx.rgb(*colors['key'])
+                    else:
+                        ctx.rgb(*colors['string'])
+                ctx.move_to(x_position, y_position)
+                ctx.text(char)
+                x_position += 7
+            y_position += 20
+        
+        ctx.restore()
 
 __app_export__ = ClockJSON
