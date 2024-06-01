@@ -1,11 +1,10 @@
 import app
 import wifi
-import json
-import os
 from requests import get
 from system.eventbus import eventbus
 from app_components import clear_background
 from events.input import Buttons, BUTTON_TYPES
+import time
 
 IPIFY_URL = "https://api.ipify.org"
 TIME_API_URL = "https://timeapi.io/api/Time/current/ip?ipAddress="
@@ -23,7 +22,7 @@ class ClockJSON(app.App):
         self.month = 0
         self.year = 0
         self.weekday = ""
-        self.last_update_minutes = 0
+        self.last_update_time = 0
         
     def check_wifi(self):
         self.update_state("checking_wifi")
@@ -71,7 +70,7 @@ class ClockJSON(app.App):
                 self.year = time_data.get("year")
                 self.weekday = time_data.get("dayOfWeek")
                 self.update_state("time_fetched")
-                self.last_update_minutes = self.get_current_minutes()
+                self.last_update_time = time.time()
             except Exception:
                 self.update_state("time_fetch_error")
     
@@ -106,22 +105,23 @@ class ClockJSON(app.App):
         elif self.state == "ip_ready":
             self.update_state("fetching_time")
         elif self.state == "no_ip":
-            self.ip = "Can't acccess API\nC button to retry"
+            self.ip = "Can't access API\nC button to retry"
         elif self.state == "time_fetched" and not self.time_fetched:
             self.time_fetched = True
         elif self.state == "time_fetch_error":
-            self.local_time = "Can't acccess API\nC button to retry"
+            self.local_time = "Can't access API\nC button to retry"
             
         if self.button_states.get(BUTTON_TYPES["CANCEL"]):
             self.button_states.clear()
             self.minimise()
 
-        # Update time every minute if time_fetched
+        # Update time based on the elapsed time since the last update
         if self.state == "time_fetched":
-            current_minutes = self.get_current_minutes()
-            if current_minutes != self.last_update_minutes:
-                self.increment_time()
-                self.last_update_minutes = current_minutes
+            current_time = time.time()
+            elapsed_seconds = int(current_time - self.last_update_time)
+            if elapsed_seconds >= 60:
+                self.increment_time(elapsed_seconds // 60)
+                self.last_update_time = current_time - (elapsed_seconds % 60)
 
     def draw(self, ctx):
         ctx.save()
@@ -142,7 +142,7 @@ class ClockJSON(app.App):
             ctx.rgb(1, 0, 0).move_to(0, 0).text(self.ip)
         elif self.state == 'time_fetched':
             ctx.rgb(0, 0.2, 0).rectangle(-120, -120, 240, 240).fill()
-            [formatted_date,formatted_time] = self.format_time()
+            formatted_date, formatted_time = self.format_time()
             self.draw_clock(ctx, formatted_date, formatted_time, self.ip)
         elif self.state == 'time_fetch_error':
             ctx.rgb(0.2, 0, 0).rectangle(-120, -120, 240, 240).fill()
@@ -158,17 +158,17 @@ class ClockJSON(app.App):
             months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
             formatted_date = f'{weekdays[self.get_weekday_index()]}, {self.day}{day_suffix(self.day)} {months[self.month - 1]}'
             formatted_time = f'{self.hours:02d}:{self.minutes:02d}'
-            return [formatted_date,formatted_time]
+            return formatted_date, formatted_time
         return "No time API"
 
-    def increment_time(self):
-        self.minutes += 1
-        if self.minutes >= 60:
-            self.minutes = 0
+    def increment_time(self, minutes_to_increment=1):
+        self.minutes += minutes_to_increment
+        while self.minutes >= 60:
+            self.minutes -= 60
             self.hours += 1
-        if self.hours >= 24:
-            self.hours = 0
-            self.increment_day()
+            if self.hours >= 24:
+                self.hours = 0
+                self.increment_day()
 
     def increment_day(self):
         days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
