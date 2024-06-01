@@ -5,13 +5,18 @@ from system.eventbus import eventbus
 from app_components import clear_background
 from events.input import Buttons, BUTTON_TYPES
 import time
-
+from system.eventbus import eventbus
+from system.patterndisplay.events import *
+from tildagonos import tildagonos
+import asyncio
 IPIFY_URL = "https://api.ipify.org"
 TIME_API_URL = "https://timeapi.io/api/Time/current/ip?ipAddress="
 
 class ClockJSON(app.App):
     def __init__(self):
         self.button_states = Buttons(self)
+        eventbus.emit(PatternDisable())
+        self._make_black()
         self.state = "init"
         self.ip = ""
         self.local_time = ""
@@ -23,6 +28,12 @@ class ClockJSON(app.App):
         self.year = 0
         self.weekday = ""
         self.last_update_time = 0
+        
+    def _make_black(self):
+        asyncio.sleep(0.5)
+        for i in range(1, 13):
+            tildagonos.leds[i] = (0, 0, 0)
+        tildagonos.leds.write()
         
     def check_wifi(self):
         self.update_state("checking_wifi")
@@ -85,6 +96,7 @@ class ClockJSON(app.App):
         self.update_state("ip_ready")
 
     def update(self, delta):
+        self._make_black()
         if self.button_states.get(BUTTON_TYPES["CANCEL"]):
             self.button_states.clear()
             self.minimise()
