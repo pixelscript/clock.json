@@ -9,6 +9,7 @@ from system.eventbus import eventbus
 from system.patterndisplay.events import *
 from tildagonos import tildagonos
 import asyncio
+from power import BatteryLevel
 IPIFY_URL = "https://api.ipify.org"
 TIME_API_URL = "https://timeapi.io/api/Time/current/ip?ipAddress="
 
@@ -203,6 +204,7 @@ class ClockJSON(app.App):
         return weekdays.index(self.weekday)
     
     def draw_clock(self, ctx, date_str, time_str, ip):
+        power = f"{(BatteryLevel() / 106.25) * 100:.0f} %"
         clear_background(ctx)
         ctx.save()
         
@@ -222,7 +224,7 @@ class ClockJSON(app.App):
     
         # Drawing line numbers
         ctx.rgb(0.5, 0.5, 0.5)
-        ctx.font_size = 12
+        ctx.font_size = 14
         for i in range(0, 14):
             ctx.move_to(-95, (i * 20) - 60)
             ctx.text(str(i+1))
@@ -232,8 +234,9 @@ class ClockJSON(app.App):
   "date": "{}",
   "time": "{}",
   "ip": "{}"
+  "battery": "{}"
 }}
-'''.format(date_str, time_str, ip)
+'''.format(date_str, time_str, ip, power)
 
         # Drawing the JSON data with syntax highlighting
 
