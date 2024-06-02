@@ -1,6 +1,6 @@
 {
     "callable": "ClockJSON",
-    "name": "clock.json",
+    "name": "json clock",
     "category": "Badge",
     "hidden": false,
     "path": "apps.clock.app"
