@@ -37,4 +37,4 @@ description = "A JSON style clock that uses your ip to work out local time."
 # increased, we interpret this as a new version being released.
 #
 # Version number must be an integer!
-version = "0.0.5"
+version = "0.0.6"
